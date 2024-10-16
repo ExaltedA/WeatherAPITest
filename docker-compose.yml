@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: django
+    ports:
+      - '8000:8000'
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - redis
+
+  migration:
+    build: .
+    container_name: django-migration
+    command: python manage.py migrate
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    restart: "no"
+    entrypoint: ""
+
+  redis:
+    image: redis:6
+    container_name: redis
+    ports:
+      - "6379:6379"

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Forecast</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            font-size: 2rem;
+            color: #333;
+        }
+        form {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            width: 60%;
+            padding: 10px;
+            margin-right: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-size: 1rem;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+        }
+        .error {
+            color: red;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+        th, td {
+            padding: 12px;
+            text-align: center;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        .weather-icon {
+            width: 50px;
+            background-color: white;
+            border-radius: 50%;
+            padding: 5px;
+            box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.2);
+        }
+        .hourly-forecast {
+            display: none;
+            margin-top: 10px;
+        }
+        .toggle-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .toggle-btn:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Search Weather Forecast</h1>
+        <form id="weatherForm">
+            <label for="city">Enter City Name:</label>
+            <input type="text" id="city" name="city" required>
+            <button type="submit">Get Forecast</button>
+        </form>
+
+        <div class="result">
+            <h2>Forecast for <span id="cityName"></span></h2>
+            <div id="error" class="error"></div>
+            <table id="forecastTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Icon</th>
+                        <th>Description</th>
+                        <th>Avg Temp (°C)</th>
+                        <th>Min Temp (°C)</th>
+                        <th>Max Temp (°C)</th>
+                        <th>Pressure (hPa)</th>
+                        <th>Humidity (%)</th>
+                        <th>Wind Speed (m/s)</th>
+                        <th>Show Hourly</th>
+                    </tr>
+                </thead>
+                <tbody id="forecastBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('weatherForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const city = document.getElementById('city').value;
+            fetchForecast(city);
+        });
+
+        function fetchForecast(city) {
+            const forecastTable = document.getElementById('forecastTable');
+            const forecastBody = document.getElementById('forecastBody');
+            const errorDiv = document.getElementById('error');
+            const cityName = document.getElementById('cityName');
+
+            const apiUrl = `{% url 'weather-forecast' city_name='CITY_NAME' %}`.replace('CITY_NAME', city);
+
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        errorDiv.textContent = data.error;
+                        forecastTable.style.display = 'none';
+                    } else {
+                        cityName.textContent = city;
+                        forecastBody.innerHTML = '';  // Clear previous results
+                        data.forEach((day, index) => {
+                            const iconUrl = `http://openweathermap.org/img/wn/${day.hourly_forecasts[0].icon}@2x.png`;
+
+                            let dayRow = `
+                                <tr>
+                                    <td>${day.date}</td>
+                                    <td><img src="${iconUrl}" alt="weather icon" class="weather-icon"></td>
+                                    <td>${day.hourly_forecasts[0].description}</td>
+                                    <td>${day.temperature_avg}</td>
+                                    <td>${day.temperature_min}</td>
+                                    <td>${day.temperature_max}</td>
+                                    <td>${day.hourly_forecasts[0].pressure}</td>
+                                    <td>${day.hourly_forecasts[0].humidity}</td>
+                                    <td>${day.hourly_forecasts[0].wind_speed}</td>
+                                    <td><button class="toggle-btn" onclick="toggleHourly(${index})">Show Hourly</button></td>
+                                </tr>
+                                <tr id="hourly-${index}" class="hourly-forecast">
+                                    <td colspan="10">
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th>Time</th>
+                                                    <th>Temperature (°C)</th>
+                                                    <th>Pressure (hPa)</th>
+                                                    <th>Humidity (%)</th>
+                                                    <th>Wind Speed (m/s)</th>
+                                                    <th>Description</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${day.hourly_forecasts.map(hour => `
+                                                    <tr>
+                                                        <td>${hour.time}</td>
+                                                        <td>${hour.temperature}</td>
+                                                        <td>${hour.pressure}</td>
+                                                        <td>${hour.humidity}</td>
+                                                        <td>${hour.wind_speed}</td>
+                                                        <td>${hour.description}</td>
+                                                    </tr>
+                                                `).join('')}
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                </tr>
+                            `;
+                            forecastBody.innerHTML += dayRow;
+                        });
+                        forecastTable.style.display = 'table';
+                        errorDiv.textContent = '';
+                    }
+                })
+                .catch(error => {
+                    errorDiv.textContent = 'Failed to retrieve weather data. Please try again.';
+                    forecastTable.style.display = 'none';
+                });
+        }
+
+        function toggleHourly(index) {
+            const hourlyRow = document.getElementById(`hourly-${index}`);
+            if (hourlyRow.style.display === 'none') {
+                hourlyRow.style.display = 'table-row';
+            } else {
+                hourlyRow.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
