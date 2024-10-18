@@ -24,6 +24,17 @@ services:
     restart: "no"
     entrypoint: ""
 
+  web_test:
+    build: .
+    container_name: django-test
+    command: python manage.py test
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    restart: "no"
+    entrypoint: ""
+
   redis:
     image: redis:6
     container_name: redis
